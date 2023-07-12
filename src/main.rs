@@ -16,7 +16,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     if args.len() != 4 {
         println!("Usage: ");
-        println!("sha_1cracker: <wordlist.txt> <sha1_hash>");
+        println!("sha_1cracker: <wordlist.txt> <sha1_hash> <mode>");
         println!("Mode:");
         println!(" mem - Load list into memory");
         println!(" line - Read list line by line");
