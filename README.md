@@ -7,5 +7,7 @@ sha_1cracker: <wordlist.txt> <sha1_hash> <mode>
 
 #### Modes
 mem - Load list into memory
+
 line - Read list line by line
+
 threads - Use multiple threads
