@@ -1,4 +1,3 @@
-use crate::constants::CHUNK_SIZE;
 use crate::password_cracker::PasswordCracker;
 use rayon::prelude::*;
 use sha1::Digest;
@@ -9,12 +8,91 @@ use std::{
 };
 
 pub enum PasswordMode {
-    Mem,
-    Line,
-    Threads,
+    Mem(MemPasswordMode),
+    Line(LinePasswordMode),
+    Threads(ThreadsPasswordMode),
 }
 
-impl PasswordMode {
+pub trait ProcessingStrategy {
+    fn process_chunk(
+        &self,
+        chunk: &[String],
+        password_cracker: &PasswordCracker,
+    ) -> Result<bool, Box<dyn Error>>;
+
+    fn process_wordlist(
+        &self,
+        filename: &str,
+        password_cracker: &PasswordCracker,
+    ) -> Result<bool, Box<dyn Error>>;
+}
+
+pub struct MemPasswordMode;
+pub struct LinePasswordMode;
+pub struct ThreadsPasswordMode {
+    chunk_size: usize,
+}
+
+impl ThreadsPasswordMode {
+    pub fn new(chunk_size: usize) -> Self {
+        ThreadsPasswordMode { chunk_size }
+    }
+}
+
+impl ProcessingStrategy for MemPasswordMode {
+    fn process_chunk(
+        &self,
+        _chunk: &[String],
+        _password_cracker: &PasswordCracker,
+    ) -> Result<bool, Box<dyn Error>> {
+        Ok(false)
+    }
+
+    fn process_wordlist(
+        &self,
+        filename: &str,
+        password_cracker: &PasswordCracker,
+    ) -> Result<bool, Box<dyn Error>> {
+        let mut file = File::open(filename)?;
+        let mut contents = String::new();
+        file.read_to_string(&mut contents)?;
+        let passwords: Vec<&str> = contents.split('\n').collect();
+        for password in passwords {
+            if password_cracker.check_password(password) {
+                return Ok(true);
+            }
+        }
+        Ok(false)
+    }
+}
+
+impl ProcessingStrategy for LinePasswordMode {
+    fn process_chunk(
+        &self,
+        _chunk: &[String],
+        _password_cracker: &PasswordCracker,
+    ) -> Result<bool, Box<dyn Error>> {
+        Ok(false)
+    }
+
+    fn process_wordlist(
+        &self,
+        filename: &str,
+        password_cracker: &PasswordCracker,
+    ) -> Result<bool, Box<dyn Error>> {
+        let file = File::open(filename)?;
+        let reader = BufReader::new(file);
+        for line in reader.lines() {
+            let line = line?;
+            if password_cracker.check_password(&line) {
+                return Ok(true);
+            }
+        }
+        Ok(false)
+    }
+}
+
+impl ProcessingStrategy for ThreadsPasswordMode {
     fn process_chunk(
         &self,
         chunk: &[String],
@@ -32,58 +110,45 @@ impl PasswordMode {
         }))
     }
 
+    fn process_wordlist(
+        &self,
+        filename: &str,
+        password_cracker: &PasswordCracker,
+    ) -> Result<bool, Box<dyn Error>> {
+        let file = File::open(filename)?;
+        let reader = BufReader::new(file);
+
+        let mut chunk = Vec::with_capacity(self.chunk_size);
+        for line in reader.lines() {
+            let line = line?;
+            chunk.push(line);
+
+            if chunk.len() >= self.chunk_size {
+                if self.process_chunk(&chunk, password_cracker)? {
+                    return Ok(true);
+                }
+                chunk.clear();
+            }
+        }
+
+        if self.process_chunk(&chunk, password_cracker)? {
+            return Ok(true);
+        }
+
+        Ok(false)
+    }
+}
+
+impl PasswordMode {
     pub fn process_wordlist(
         &self,
         filename: &str,
         password_cracker: &PasswordCracker,
     ) -> Result<bool, Box<dyn Error>> {
         match self {
-            PasswordMode::Mem => {
-                let mut file = File::open(filename)?;
-                let mut contents = String::new();
-                file.read_to_string(&mut contents)?;
-                let passwords: Vec<&str> = contents.split('\n').collect();
-                for password in passwords {
-                    if password_cracker.check_password(password) {
-                        return Ok(true);
-                    }
-                }
-                Ok(false)
-            }
-            PasswordMode::Line => {
-                let file = File::open(filename)?;
-                let reader = BufReader::new(file);
-                for line in reader.lines() {
-                    let line = line?;
-                    if password_cracker.check_password(&line) {
-                        return Ok(true);
-                    }
-                }
-                Ok(false)
-            }
-            PasswordMode::Threads => {
-                let file = File::open(filename)?;
-                let reader = BufReader::new(file);
-
-                let mut chunk = Vec::with_capacity(CHUNK_SIZE);
-                for line in reader.lines() {
-                    let line = line?;
-                    chunk.push(line);
-
-                    if chunk.len() >= CHUNK_SIZE {
-                        if self.process_chunk(&chunk, password_cracker)? {
-                            return Ok(true);
-                        }
-                        chunk.clear();
-                    }
-                }
-
-                if self.process_chunk(&chunk, password_cracker)? {
-                    return Ok(true);
-                }
-
-                Ok(false)
-            }
+            PasswordMode::Mem(mode) => mode.process_wordlist(filename, password_cracker),
+            PasswordMode::Line(mode) => mode.process_wordlist(filename, password_cracker),
+            PasswordMode::Threads(mode) => mode.process_wordlist(filename, password_cracker),
         }
     }
 }

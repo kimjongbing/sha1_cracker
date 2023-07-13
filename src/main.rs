@@ -1,9 +1,13 @@
 mod constants;
 mod password_cracker;
 mod password_mode;
+use crate::constants::CHUNK_SIZE;
 use crate::constants::SHA1_HEX_STRING_LENGTH;
 use crate::password_cracker::PasswordCracker;
+use crate::password_mode::LinePasswordMode;
+use crate::password_mode::MemPasswordMode;
 use crate::password_mode::PasswordMode;
+use crate::password_mode::ThreadsPasswordMode;
 use std::{env, error::Error};
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -27,13 +31,14 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let password_cracker = PasswordCracker::new(hash_to_crack)?;
 
-    let mode = &args[3];
-    let password_found = match mode.as_str() {
-        "mem" => PasswordMode::Mem.process_wordlist(&args[1], &password_cracker)?,
-        "line" => PasswordMode::Line.process_wordlist(&args[1], &password_cracker)?,
-        "threads" => PasswordMode::Threads.process_wordlist(&args[1], &password_cracker)?,
+    let mode = match args[3].as_str() {
+        "mem" => PasswordMode::Mem(MemPasswordMode),
+        "line" => PasswordMode::Line(LinePasswordMode),
+        "threads" => PasswordMode::Threads(ThreadsPasswordMode::new(CHUNK_SIZE)),
         _ => return Err("Invalid mode".into()),
     };
+
+    let password_found = mode.process_wordlist(&args[1], &password_cracker)?;
 
     if !password_found {
         println!("Password not found in wordlist");
