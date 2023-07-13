@@ -7,19 +7,7 @@ use std::{
     io::{BufRead, BufReader, Read},
 };
 
-pub enum PasswordMode {
-    Mem(MemPasswordMode),
-    Line(LinePasswordMode),
-    Threads(ThreadsPasswordMode),
-}
-
 pub trait ProcessingStrategy {
-    fn process_chunk(
-        &self,
-        chunk: &[String],
-        password_cracker: &PasswordCracker,
-    ) -> Result<bool, Box<dyn Error>>;
-
     fn process_wordlist(
         &self,
         filename: &str,
@@ -27,27 +15,44 @@ pub trait ProcessingStrategy {
     ) -> Result<bool, Box<dyn Error>>;
 }
 
+pub trait MemProcessingStrategy: ProcessingStrategy {}
+pub trait LineProcessingStrategy: ProcessingStrategy {}
+pub trait ThreadsProcessingStrategy: ProcessingStrategy {}
+
 pub struct MemPasswordMode;
 pub struct LinePasswordMode;
 pub struct ThreadsPasswordMode {
     chunk_size: usize,
 }
 
+impl MemProcessingStrategy for MemPasswordMode {}
+impl LineProcessingStrategy for LinePasswordMode {}
+impl ThreadsProcessingStrategy for ThreadsPasswordMode {}
+
 impl ThreadsPasswordMode {
     pub fn new(chunk_size: usize) -> Self {
         ThreadsPasswordMode { chunk_size }
     }
+
+    fn process_chunk(
+        &self,
+        chunk: &[String],
+        password_cracker: &PasswordCracker,
+    ) -> Result<bool, Box<dyn Error>> {
+        Ok(chunk.par_iter().any(|line| {
+            let common_password = line.trim();
+            let hashed_password = hex::encode(sha1::Sha1::digest(common_password.as_bytes()));
+            if password_cracker.hash_to_crack == hashed_password {
+                println!("Found password: {}", &common_password);
+                true
+            } else {
+                false
+            }
+        }))
+    }
 }
 
 impl ProcessingStrategy for MemPasswordMode {
-    fn process_chunk(
-        &self,
-        _chunk: &[String],
-        _password_cracker: &PasswordCracker,
-    ) -> Result<bool, Box<dyn Error>> {
-        Ok(false)
-    }
-
     fn process_wordlist(
         &self,
         filename: &str,
@@ -67,14 +72,6 @@ impl ProcessingStrategy for MemPasswordMode {
 }
 
 impl ProcessingStrategy for LinePasswordMode {
-    fn process_chunk(
-        &self,
-        _chunk: &[String],
-        _password_cracker: &PasswordCracker,
-    ) -> Result<bool, Box<dyn Error>> {
-        Ok(false)
-    }
-
     fn process_wordlist(
         &self,
         filename: &str,
@@ -93,23 +90,6 @@ impl ProcessingStrategy for LinePasswordMode {
 }
 
 impl ProcessingStrategy for ThreadsPasswordMode {
-    fn process_chunk(
-        &self,
-        chunk: &[String],
-        password_cracker: &PasswordCracker,
-    ) -> Result<bool, Box<dyn Error>> {
-        Ok(chunk.par_iter().any(|line| {
-            let common_password = line.trim();
-            let hashed_password = hex::encode(sha1::Sha1::digest(common_password.as_bytes()));
-            if password_cracker.hash_to_crack == hashed_password {
-                println!("Found password: {}", &common_password);
-                true
-            } else {
-                false
-            }
-        }))
-    }
-
     fn process_wordlist(
         &self,
         filename: &str,
@@ -139,6 +119,12 @@ impl ProcessingStrategy for ThreadsPasswordMode {
     }
 }
 
+pub enum PasswordMode {
+    Mem(Box<dyn MemProcessingStrategy>),
+    Line(Box<dyn LineProcessingStrategy>),
+    Threads(Box<dyn ThreadsProcessingStrategy>),
+}
+
 impl PasswordMode {
     pub fn process_wordlist(
         &self,
@@ -146,9 +132,11 @@ impl PasswordMode {
         password_cracker: &PasswordCracker,
     ) -> Result<bool, Box<dyn Error>> {
         match self {
-            PasswordMode::Mem(mode) => mode.process_wordlist(filename, password_cracker),
-            PasswordMode::Line(mode) => mode.process_wordlist(filename, password_cracker),
-            PasswordMode::Threads(mode) => mode.process_wordlist(filename, password_cracker),
+            PasswordMode::Mem(strategy) => strategy.process_wordlist(filename, password_cracker),
+            PasswordMode::Line(strategy) => strategy.process_wordlist(filename, password_cracker),
+            PasswordMode::Threads(strategy) => {
+                strategy.process_wordlist(filename, password_cracker)
+            }
         }
     }
 }

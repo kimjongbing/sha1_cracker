@@ -32,9 +32,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     let password_cracker = PasswordCracker::new(hash_to_crack)?;
 
     let mode = match args[3].as_str() {
-        "mem" => PasswordMode::Mem(MemPasswordMode),
-        "line" => PasswordMode::Line(LinePasswordMode),
-        "threads" => PasswordMode::Threads(ThreadsPasswordMode::new(CHUNK_SIZE)),
+        "mem" => PasswordMode::Mem(Box::new(MemPasswordMode)),
+        "line" => PasswordMode::Line(Box::new(LinePasswordMode)),
+        "threads" => PasswordMode::Threads(Box::new(ThreadsPasswordMode::new(CHUNK_SIZE))),
         _ => return Err("Invalid mode".into()),
     };
 
