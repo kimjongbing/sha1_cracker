@@ -8,8 +8,8 @@ sha_1cracker: `<wordlist.txt> <sha1_hash> <mode>`
 `<wordlist.txt>` is path to your wordlist
 
 #### Modes
-mem - Load the entire list into memory.
+mem - Load the entire list into memory. (Not recommended for large lists as it can exceed the available RAM and result in an Out-Of-Memory error) 
 
-line - Read list line by line.
+line - Read list line by line. (Slow as it is single-threaded and reads the list only line-by-line)
 
-threads - Uses multiple threads. Chunks of the wordlist are read into memory and are processed in parallel with multiple threads, done for each chunk until completed.  
+threads - Uses multiple threads. Chunks of the wordlist are read into memory and are processed in parallel with multiple threads, done for each chunk until completed. (Recommended Mode)
