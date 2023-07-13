@@ -1,6 +1,5 @@
 use crate::password_cracker::PasswordCracker;
 use rayon::prelude::*;
-use sha1::Digest;
 use std::{
     error::Error,
     fs::File,
@@ -41,8 +40,7 @@ impl ThreadsPasswordMode {
     ) -> Result<bool, Box<dyn Error>> {
         Ok(chunk.par_iter().any(|line| {
             let common_password = line.trim();
-            let hashed_password = hex::encode(sha1::Sha1::digest(common_password.as_bytes()));
-            if password_cracker.hash_to_crack == hashed_password {
+            if password_cracker.check_hash(common_password) {
                 println!("Found password: {}", &common_password);
                 true
             } else {

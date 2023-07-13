@@ -24,4 +24,10 @@ impl PasswordCracker {
             false
         }
     }
+
+    pub fn check_hash(&self, hash: &str) -> bool {
+        let hashed_input = hex::encode(sha1::Sha1::digest(hash.as_bytes()));
+        self.hash_to_crack == hashed_input
+    }
+        
 }
