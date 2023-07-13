@@ -76,12 +76,14 @@ impl ProcessingStrategy for LinePasswordMode {
         password_cracker: &PasswordCracker,
     ) -> Result<bool, Box<dyn Error>> {
         let file = File::open(filename)?;
-        let reader = BufReader::new(file);
-        for line in reader.lines() {
-            let line = line?;
-            if password_cracker.check_password(&line) {
+        let mut reader = BufReader::new(file);
+        let mut line = String::new();
+
+        while reader.read_line(&mut line)? > 0 {
+            if password_cracker.check_password(&line.trim()) {
                 return Ok(true);
             }
+            line.clear();
         }
         Ok(false)
     }
