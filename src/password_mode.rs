@@ -3,7 +3,7 @@ use rayon::prelude::*;
 use std::{
     error::Error,
     fs::File,
-    io::{BufRead, BufReader, Read},
+    io::{BufRead, BufReader, Read}, collections::HashSet,
 };
 
 pub trait ProcessingStrategy {
@@ -59,8 +59,8 @@ impl ProcessingStrategy for MemPasswordMode {
         let mut file = File::open(filename)?;
         let mut contents = String::new();
         file.read_to_string(&mut contents)?;
-        let passwords: Vec<&str> = contents.split('\n').collect();
-        for password in passwords {
+        let passwords: HashSet<&str> = contents.split('\n').collect();
+        for password in &passwords {
             if password_cracker.check_password(password) {
                 return Ok(true);
             }
