@@ -5,6 +5,8 @@ This was made after I followed a chapter in the book ["Black Hat Rust"](https://
 ### Usage
 sha_1cracker: <wordlist.txt> <sha1_hash> <mode>
 
+<wordlist.txt> is path to your wordlist
+
 #### Modes
 mem - Load list into memory
 
