@@ -1,23 +1,31 @@
 # sha1_cracker
-## Basic sha1_cracker
-This was made after I followed a chapter in the book ["Black Hat Rust"](https://kerkour.com/black-hat-rust) and then decided to add some extra functionality to the example program. The original program only allowed you to process the wordlist line-by-line but now you have parameters that you can input to either maintain original functionality (line) or to alternatively load the wordlist entirely into memory or to read the wordlist line-by-line but with multiple threads. 
+## Advanced sha1_cracker
+This utility was inspired by a chapter in the book ["Black Hat Rust"](https://kerkour.com/black-hat-rust), and I have expanded upon the original program. The original program allowed you to process the wordlist line-by-line. Now, my version gives you parameters that let you choose to maintain the original functionality (line), load the entire wordlist into memory (mem), or process the wordlist line-by-line with multiple threads (threads). In addition, I have introduced a "rule" functionality that allows you to modify the words in the list according to specific rules, such as appending or prepending a digit, replacing 'a' with '@', and replacing 'i' with '1'. 
 
 ### Building
 ```cargo build --release```
 
-the binary will be located in target/release folder
-
-
-
+The binary will be located in the target/release folder.
 
 ### Usage
-sha_1cracker: `<wordlist.txt> <sha1_hash> <mode>`
+sha1_cracker: `<sha1_hash> <wordlist.txt> --mode <mode> [--rule <rule1> <rule2> ...]`
 
-`<wordlist.txt>` is path to your wordlist
+`<wordlist.txt>` is the path to your wordlist.
 
 #### Modes
-**mem** - Load the entire list into memory. *(Not recommended for large lists as it can exceed the available RAM and result in an Out-Of-Memory error)* 
+**mem** - Loads the entire list into memory. *(Not recommended for large lists as it can exceed the available RAM and result in an Out-Of-Memory error)* 
 
-**line** - Read list line by line. *(Slow as it is single-threaded and reads the list only line-by-line)*
+**line** - Reads the list line by line. *(Slow as it is single-threaded and reads the list only line-by-line)*
 
 **threads** - Uses multiple threads. *Chunks of the wordlist are read into memory and are processed in parallel with multiple threads, done for each chunk until completed. (Recommended Mode)*
+
+#### Rules
+**append** - Appends a digit to the word.
+
+**prepend** - Prepends a digit to the word.
+
+**replace_a** - Replaces 'a' in the word with '@'.
+
+**replace_i** - Replaces 'i' in the word with '1'.
+
+**all** - Applies all the above rules.
