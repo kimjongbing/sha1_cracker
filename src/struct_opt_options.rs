@@ -2,7 +2,7 @@ use crate::password_mode::PasswordMode;
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
-#[structopt(name = "password cracker", about = "An example of StructOpt usage.")]
+#[structopt(name = "password cracker")]
 pub struct Opt {
     /// SHA-1 hash to be cracked
     pub hash: String,
