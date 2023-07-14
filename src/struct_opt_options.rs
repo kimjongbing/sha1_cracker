@@ -4,10 +4,10 @@ use structopt::StructOpt;
 #[derive(Debug, StructOpt)]
 #[structopt(name = "password cracker")]
 pub struct Opt {
-    /// SHA-1 hash to be cracked
+ 
     pub hash: String,
 
-    /// Path to a text file with a wordlist
+   
     pub wordlist: String,
 
     /// Processing mode. Choices: mem, line, threads
