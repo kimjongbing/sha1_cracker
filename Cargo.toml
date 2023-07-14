@@ -11,6 +11,7 @@ hex = "0.4"
 rayon = "1.5.1"
 crossbeam = "0.8.1"
 num_cpus = "1.13.0"
+structopt = "0.3.23"
 
 [profile.dev]
 incremental = true
