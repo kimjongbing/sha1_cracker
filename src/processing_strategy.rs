@@ -7,14 +7,14 @@ pub trait ProcessingStrategy {
         &self,
         filename: &str,
         password_cracker: &PasswordCracker,
-        rules: &[Box<dyn Rule>],
+        rules: &[&dyn Rule],
     ) -> Result<bool, Box<dyn Error>>;
 
     fn apply_rules_and_check_password(
         &self,
         password: &str,
         password_cracker: &PasswordCracker,
-        rules: &[Box<dyn Rule>],
+        rules: &[&dyn Rule],
     ) -> bool {
         let mut variations = vec![password.to_string()];
         if !rules.is_empty() {

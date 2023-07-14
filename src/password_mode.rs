@@ -35,7 +35,7 @@ impl ThreadsPasswordMode {
         &self,
         chunk: &[String],
         password_cracker: &PasswordCracker,
-        rules: &[Box<dyn Rule>],
+        rules: &[&dyn Rule],
     ) -> Result<bool, Box<dyn Error>> {
         Ok(chunk
             .par_iter()
@@ -48,14 +48,14 @@ impl ProcessingStrategy for MemPasswordMode {
         &self,
         filename: &str,
         password_cracker: &PasswordCracker,
-        rules: &[Box<dyn Rule>],
+        rules: &[&dyn Rule],
     ) -> Result<bool, Box<dyn Error>> {
         let mut file = File::open(filename)?;
         let mut contents = String::new();
         file.read_to_string(&mut contents)?;
-        let passwords: HashSet<&str> = contents.split('\n').collect();
+        let passwords: HashSet<String> = contents.split('\n').map(|s| s.to_string()).collect();
         for password in passwords {
-            if self.apply_rules_and_check_password(password, password_cracker, rules) {
+            if self.apply_rules_and_check_password(&password, password_cracker, rules) {
                 return Ok(true);
             }
         }
@@ -69,7 +69,7 @@ impl ProcessingStrategy for LinePasswordMode {
         &self,
         filename: &str,
         password_cracker: &PasswordCracker,
-        rules: &[Box<dyn Rule>],
+        rules: &[&dyn Rule],
     ) -> Result<bool, Box<dyn Error>> {
         let file = File::open(filename)?;
         let mut reader = BufReader::new(file);
@@ -92,7 +92,7 @@ impl ProcessingStrategy for ThreadsPasswordMode {
         &self,
         filename: &str,
         password_cracker: &PasswordCracker,
-        rules: &[Box<dyn Rule>],
+        rules: &[&dyn Rule],
     ) -> Result<bool, Box<dyn Error>> {
         let file = File::open(filename)?;
         let reader = BufReader::new(file);
@@ -160,15 +160,16 @@ impl PasswordMode {
         password_cracker: &PasswordCracker,
         rules: &[Box<dyn Rule>],
     ) -> Result<bool, Box<dyn Error>> {
+        let rule_refs: Vec<&dyn Rule> = rules.iter().map(|r| r.as_ref()).collect();
         match self {
             PasswordMode::Mem(strategy) => {
-                strategy.process_wordlist(filename, password_cracker, rules)
+                strategy.process_wordlist(filename, password_cracker, rule_refs.as_slice())
             }
             PasswordMode::Line(strategy) => {
-                strategy.process_wordlist(filename, password_cracker, rules)
+                strategy.process_wordlist(filename, password_cracker, rule_refs.as_slice())
             }
             PasswordMode::Threads(strategy) => {
-                strategy.process_wordlist(filename, password_cracker, rules)
+                strategy.process_wordlist(filename, password_cracker, rule_refs.as_slice())
             }
         }
     }
