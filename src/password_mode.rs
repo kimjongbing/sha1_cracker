@@ -1,6 +1,7 @@
 use crate::constants::CHUNK_SIZE;
 use crate::password_cracker::PasswordCracker;
 use crate::password_rules_attack::Rule;
+use crate::processing_strategy::ProcessingStrategy;
 use rayon::prelude::*;
 use std::{
     collections::HashSet,
@@ -10,15 +11,6 @@ use std::{
     io::{BufRead, BufReader, Read},
     str::FromStr,
 };
-
-pub trait ProcessingStrategy {
-    fn process_wordlist(
-        &self,
-        filename: &str,
-        password_cracker: &PasswordCracker,
-        rules: &[Box<dyn Rule>],
-    ) -> Result<bool, Box<dyn Error>>;
-}
 
 pub trait MemProcessingStrategy: ProcessingStrategy {}
 pub trait LineProcessingStrategy: ProcessingStrategy {}
@@ -45,19 +37,9 @@ impl ThreadsPasswordMode {
         password_cracker: &PasswordCracker,
         rules: &[Box<dyn Rule>],
     ) -> Result<bool, Box<dyn Error>> {
-        Ok(chunk.par_iter().any(|password| {
-            let mut variations = Vec::new();
-            if !rules.is_empty() {
-                for rule in rules {
-                    variations.extend(rule.apply(password.clone()));
-                }
-            } else {
-                variations.push(password.clone());
-            }
-            variations
-                .iter()
-                .any(|variant| password_cracker.check_password(variant))
-        }))
+        Ok(chunk
+            .par_iter()
+            .any(|password| self.apply_rules_and_check_password(password, password_cracker, rules)))
     }
 }
 
@@ -73,18 +55,11 @@ impl ProcessingStrategy for MemPasswordMode {
         file.read_to_string(&mut contents)?;
         let passwords: HashSet<&str> = contents.split('\n').collect();
         for password in passwords {
-            let mut variations = vec![password.to_string()];
-            if !rules.is_empty() {
-                for rule in rules {
-                    variations.extend(rule.apply(password.to_string()));
-                }
-            }
-            for variant in variations {
-                if password_cracker.check_password(&variant) {
-                    return Ok(true);
-                }
+            if self.apply_rules_and_check_password(password, password_cracker, rules) {
+                return Ok(true);
             }
         }
+
         Ok(false)
     }
 }
@@ -102,19 +77,12 @@ impl ProcessingStrategy for LinePasswordMode {
 
         while reader.read_line(&mut line)? > 0 {
             let password = line.trim();
-            let mut variations = vec![password.to_string()];
-            if !rules.is_empty() {
-                for rule in rules {
-                    variations.extend(rule.apply(password.to_string()));
-                }
-            }
-            for variant in variations {
-                if password_cracker.check_password(&variant) {
-                    return Ok(true);
-                }
+            if self.apply_rules_and_check_password(password, password_cracker, rules) {
+                return Ok(true);
             }
             line.clear();
         }
+
         Ok(false)
     }
 }

@@ -2,6 +2,7 @@ mod constants;
 mod password_cracker;
 mod password_mode;
 mod password_rules_attack;
+mod processing_strategy;
 mod struct_opt_options;
 use std::error::Error;
 use structopt::StructOpt;
